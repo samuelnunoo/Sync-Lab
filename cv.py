@@ -5,9 +5,9 @@ import time, random
 
 ####################################################### 
 #                      
-# Partner 1:
+# Partner 1: Indiana Huey
 #
-# Partner 2:
+# Partner 2: Samuel Nunoo
 # 
 #######################################################
 
@@ -20,7 +20,13 @@ import time, random
 # Make sure nobody is holding a Club synchronization variable
 # while executing outside the Club code.
 
+# init lock and cv's
+lock = Lock()
+goth_friendly = Condition(lock)
+hipster_friendly = Condition(lock)
 
+
+# Too 
 def hangout():
     time.sleep(random.randint(0, 2))
 
@@ -30,7 +36,8 @@ class Club:
         self.goth_count = 0               # num goths in club
         self.hipster_count = 0            # num hipsters in club
         self.capacity = capacity          # only used for optional questions
-
+        self.num_attended = 0
+           
 
     def __sanitycheck(self):
         if self.goth_count > 0 and self.hipster_count > 0:
@@ -45,23 +52,58 @@ class Club:
 
         
     def goth_enter(self):
+        lock.acquire()
+        # if there are hipsters, wait
+        while (self.hipster_count > 0):
+            goth_friendly.wait()
+
         self.goth_count +=1               
         self.__sanitycheck()
+        lock.release()
 
 
     def goth_exit(self):
+
+        lock.acquire()
         self.goth_count -= 1
         self.__sanitycheck()
 
+        # if no more goths, notify all hipsters
+        if (self.goth_count == 0):
+            hipster_friendly.notify_all()
+
+        # if 6 goths have attended in a row, let hipsters join (CAN BE combined with above conditional)
+        self.num_attended += 1
+        if (self.num_attended % 6 == 0):
+            self.goth_count = 0
+            hipster_friendly.notify_all()
+        lock.release()
+
 
     def hipster_enter(self):
+        
+        lock.acquire()
+        # if there are goths, wait
+        while (self.goth_count > 0):
+            hipster_friendly.wait()
+
         self.hipster_count += 1
         self.__sanitycheck()
 
+        lock.release()
+
         
     def hipster_exit(self):
+        lock.acquire()
         self.hipster_count -= 1
         self.__sanitycheck()
+
+        # if no more hipsters, notify all goths
+        if (self.hipster_count == 0):
+            goth_friendly.notify_all()
+
+        num_attended += 1
+        lock.release()
 
 
 class Goth(Thread):
@@ -117,3 +159,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+#@note : 
